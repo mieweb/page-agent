@@ -46,6 +46,7 @@ export default (
 		args
 
 	const { doHighlightElements, focusHighlightIndex, viewportExpansion, debugMode } = args
+	const rootElement = args.rootElement ?? document.body
 	let highlightIndex = 0 // Reset highlight index
 
 	/**
@@ -1498,9 +1499,9 @@ export default (
 		}
 
 		// Special handling for root node (body)
-		if (node === document.body) {
+		if (node === rootElement) {
 			const nodeData = {
-				tagName: 'body',
+				tagName: rootElement.tagName.toLowerCase(),
 				attributes: {},
 				xpath: '/body',
 				children: [],
@@ -1736,7 +1737,7 @@ export default (
 		return id
 	}
 
-	const rootId = buildDomTree(document.body)
+	const rootId = buildDomTree(rootElement)
 
 	// Clear the cache before starting
 	DOM_CACHE.clearCache()

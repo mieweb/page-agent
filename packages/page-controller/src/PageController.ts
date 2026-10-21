@@ -89,6 +89,9 @@ export class PageController extends EventTarget {
 	constructor(config: PageControllerConfig = {}) {
 		super()
 
+		if (config.rootElement && config.rootElement.ownerDocument !== document) {
+			throw new Error('rootElement must belong to the current document')
+		}
 		this.config = config
 
 		patchReact(this)
@@ -172,6 +175,9 @@ export class PageController extends EventTarget {
 	 * Automatically bypasses mask during DOM extraction if enabled.
 	 */
 	async updateTree(): Promise<string> {
+		if (this.config.rootElement && !this.config.rootElement.isConnected) {
+			throw new Error('Configured rootElement is detached; create a new controller for the new root')
+		}
 		this.dispatchEvent(new Event('beforeUpdate'))
 
 		this.lastTimeUpdate = Date.now()
@@ -239,12 +245,29 @@ export class PageController extends EventTarget {
 	}
 
 	/**
+	 * Resolve a reference from the latest updateTree() without rebuilding or renumbering it.
+	 * Callers must associate indices with their own snapshot token and serialize operations.
+	 * Scoped controllers only act on elements in their same-document root subtree.
+	 */
+	async resolveElement(index: number): Promise<HTMLElement> {
+		this.assertIndexed()
+		if (!Number.isSafeInteger(index) || index < 0) throw new Error('Invalid element index')
+		const element = getElementByIndex(this.selectorMap, index)
+		if (!element.isConnected) throw new Error(`Element at index ${index} is detached; refresh snapshot`)
+		const root = this.config.rootElement
+		if (root && (!root.isConnected || !root.contains(element))) {
+			throw new Error(`Element at index ${index} is outside the configured root; refresh snapshot`)
+		}
+		return element
+	}
+
+	/**
 	 * Click element by index
 	 */
 	async clickElement(index: number): Promise<ActionResult> {
 		try {
 			this.assertIndexed()
-			const element = getElementByIndex(this.selectorMap, index)
+			const element = await this.resolveElement(index)
 			const elemText = this.elementTextMap.get(index)
 			await clickElement(element)
 
@@ -274,7 +297,7 @@ export class PageController extends EventTarget {
 	async inputText(index: number, text: string): Promise<ActionResult> {
 		try {
 			this.assertIndexed()
-			const element = getElementByIndex(this.selectorMap, index)
+			const element = await this.resolveElement(index)
 			const elemText = this.elementTextMap.get(index)
 			await inputTextElement(element, text)
 
@@ -296,7 +319,7 @@ export class PageController extends EventTarget {
 	async selectOption(index: number, optionText: string): Promise<ActionResult> {
 		try {
 			this.assertIndexed()
-			const element = getElementByIndex(this.selectorMap, index)
+			const element = await this.resolveElement(index)
 			const elemText = this.elementTextMap.get(index)
 			await selectOptionElement(element as HTMLSelectElement, optionText)
 
@@ -328,7 +351,7 @@ export class PageController extends EventTarget {
 
 			const scrollAmount = (pixels ?? numPages * window.innerHeight) * (down ? 1 : -1)
 
-			const element = index !== undefined ? getElementByIndex(this.selectorMap, index) : null
+			const element = index !== undefined ? await this.resolveElement(index) : null
 
 			const message = await scrollVertically(scrollAmount, element)
 
@@ -359,7 +382,7 @@ export class PageController extends EventTarget {
 
 			const scrollAmount = pixels * (right ? 1 : -1)
 
-			const element = index !== undefined ? getElementByIndex(this.selectorMap, index) : null
+			const element = index !== undefined ? await this.resolveElement(index) : null
 
 			const message = await scrollHorizontally(scrollAmount, element)
 

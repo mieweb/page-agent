@@ -22,6 +22,8 @@ export function resolveViewportExpansion(viewportExpansion?: number): number {
 }
 
 export interface DomConfig {
+	/** Root subtree for extraction. Defaults to document.body. Same document only. */
+	rootElement?: HTMLElement
 	viewportExpansion?: number
 	interactiveBlacklist?: (Element | (() => Element))[]
 	interactiveWhitelist?: (Element | (() => Element))[]
@@ -76,6 +78,7 @@ export function getFlatTree(config: DomConfig): FlatDomTree {
 	}
 
 	const elements = domTree({
+		rootElement: config.rootElement,
 		doHighlightElements: true,
 		debugMode: true,
 		focusHighlightIndex: -1,

@@ -1,6 +1,7 @@
 import type { FlatDomTree } from './type'
 
 interface DomTreeArgs {
+	rootElement?: HTMLElement
 	doHighlightElements?: boolean
 	focusHighlightIndex?: number
 	viewportExpansion?: number

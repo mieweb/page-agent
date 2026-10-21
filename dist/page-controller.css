@@ -1,0 +1,80 @@
+/* packages/page-controller/src/mask/SimulatorMask.module.css */
+.SimulatorMask_wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483641;
+  cursor: wait;
+  overflow: hidden;
+  display: none;
+}
+.SimulatorMask_wrapper.SimulatorMask_visible {
+  display: block;
+}
+
+/* packages/page-controller/src/mask/cursor.module.css */
+.cursor_cursor {
+  position: absolute;
+  width: var(--cursor-size, 75px);
+  height: var(--cursor-size, 75px);
+  pointer-events: none;
+  z-index: 10000;
+}
+.cursor_cursorBorder {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(
+      45deg,
+      rgb(57, 182, 255),
+      rgb(189, 69, 251));
+  mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">%0A  <g><path d="M 15 42 L 15 36.99 Q 15 31.99 23.7 31.99 L 28.05 31.99 Q 32.41 31.99 32.41 21.99 L 32.41 17 Q 32.41 12 41.09 16.95 L 76.31 37.05 Q 85 42 76.31 46.95 L 41.09 67.05 Q 32.41 72 32.41 62.01 L 32.41 57.01 Q 32.41 52.01 23.7 52.01 L 19.35 52.01 Q 15 52.01 15 47.01 Z" fill="none" stroke="%23000000" stroke-width="6" stroke-miterlimit="10" style="stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/></g>%0A</svg>%0A');
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  transform-origin: center;
+  transform: rotate(-135deg) scale(1.2);
+  margin-left: -10px;
+  margin-top: -18px;
+}
+.cursor_cursorFilling {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">%0A  <defs>%0A  </defs>%0A  <g xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(light-dark(rgba(0, 0, 0, 0.4), rgba(237, 237, 237, 0.4)) 3px 4px 4px);"><path d="M 15 42 L 15 36.99 Q 15 31.99 23.7 31.99 L 28.05 31.99 Q 32.41 31.99 32.41 21.99 L 32.41 17 Q 32.41 12 41.09 16.95 L 76.31 37.05 Q 85 42 76.31 46.95 L 41.09 67.05 Q 32.41 72 32.41 62.01 L 32.41 57.01 Q 32.41 52.01 23.7 52.01 L 19.35 52.01 Q 15 52.01 15 47.01 Z" fill="%23ffffff" stroke="none" style="fill: %23ffffff;"/></g>%0A</svg>%0A');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  transform-origin: center;
+  transform: rotate(-135deg) scale(1.2);
+  margin-left: -10px;
+  margin-top: -18px;
+}
+.cursor_cursorRipple {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  margin-left: -50%;
+  margin-top: -50%;
+  &::after {
+    content: "";
+    opacity: 0;
+    position: absolute;
+    inset: 0;
+    border: 4px solid rgba(57, 182, 255, 1);
+    border-radius: 50%;
+  }
+}
+.cursor_cursor.cursor_clicking .cursor_cursorRipple::after {
+  animation: cursor_cursor-ripple 300ms ease-out forwards;
+}
+@keyframes cursor_cursor-ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+/*# sourceMappingURL=page-controller.css.map */

@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types",
+    "rootDir": "packages/page-controller/src",
+    "types": []
+  },
+  "include": [
+    "packages/page-controller/src/**/*.ts",
+    "controller-env.d.ts"
+  ],
+  "exclude": [
+    "packages/page-controller/src/**/*.test.ts",
+    "packages/page-controller/src/env.d.ts"
+  ]
+}
