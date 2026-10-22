@@ -984,18 +984,24 @@ function getElementByIndex(selectorMap, index) {
   return element;
 }
 var lastClickedElement = null;
-function blurLastClickedElement() {
+function blurLastClickedElement(options) {
   if (lastClickedElement) {
+    options.beforeDispatch?.("pointer");
     lastClickedElement.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
+    options.beforeDispatch?.("pointer");
     lastClickedElement.dispatchEvent(new PointerEvent("pointerleave", { bubbles: false }));
+    options.beforeDispatch?.("pointer");
     lastClickedElement.dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
+    options.beforeDispatch?.("pointer");
     lastClickedElement.dispatchEvent(new MouseEvent("mouseleave", { bubbles: false }));
+    options.beforeDispatch?.("pointer");
     lastClickedElement.blur();
     lastClickedElement = null;
   }
 }
-async function clickElement(element) {
-  blurLastClickedElement();
+async function clickElement(element, options = {}) {
+  options.beforeDispatch?.("pointer");
+  blurLastClickedElement(options);
   lastClickedElement = element;
   await scrollIntoViewIfNeeded(element);
   const frame = element.ownerDocument.defaultView?.frameElement;
@@ -1019,25 +1025,32 @@ async function clickElement(element) {
     pointerType: "mouse"
   };
   const mouseOpts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
-  target.dispatchEvent(new PointerEvent("pointerover", pointerOpts));
-  target.dispatchEvent(new PointerEvent("pointerenter", { ...pointerOpts, bubbles: false }));
-  target.dispatchEvent(new MouseEvent("mouseover", mouseOpts));
-  target.dispatchEvent(new MouseEvent("mouseenter", { ...mouseOpts, bubbles: false }));
-  target.dispatchEvent(new PointerEvent("pointerdown", pointerOpts));
-  target.dispatchEvent(new MouseEvent("mousedown", mouseOpts));
+  const dispatchPointerEvent = (event) => {
+    options.beforeDispatch?.("pointer");
+    target.dispatchEvent(event);
+  };
+  dispatchPointerEvent(new PointerEvent("pointerover", pointerOpts));
+  dispatchPointerEvent(new PointerEvent("pointerenter", { ...pointerOpts, bubbles: false }));
+  dispatchPointerEvent(new MouseEvent("mouseover", mouseOpts));
+  dispatchPointerEvent(new MouseEvent("mouseenter", { ...mouseOpts, bubbles: false }));
+  dispatchPointerEvent(new PointerEvent("pointerdown", pointerOpts));
+  dispatchPointerEvent(new MouseEvent("mousedown", mouseOpts));
+  options.beforeDispatch?.("pointer");
   element.focus({ preventScroll: true });
-  target.dispatchEvent(new PointerEvent("pointerup", pointerOpts));
-  target.dispatchEvent(new MouseEvent("mouseup", mouseOpts));
+  dispatchPointerEvent(new PointerEvent("pointerup", pointerOpts));
+  dispatchPointerEvent(new MouseEvent("mouseup", mouseOpts));
+  options.beforeDispatch?.("click");
   target.click();
   await waitFor(0.2);
 }
-async function inputTextElement(element, text) {
+async function inputTextElement(element, text, options = {}) {
   const isContentEditable = element.isContentEditable;
   if (!isInputElement(element) && !isTextAreaElement(element) && !isContentEditable) {
     throw new Error("Element is not an input, textarea, or contenteditable");
   }
-  await clickElement(element);
+  await clickElement(element, options);
   if (isContentEditable) {
+    options.beforeDispatch?.("write");
     if (element.dispatchEvent(
       new InputEvent("beforeinput", {
         bubbles: true,
@@ -1045,6 +1058,7 @@ async function inputTextElement(element, text) {
         inputType: "deleteContent"
       })
     )) {
+      options.beforeDispatch?.("write");
       element.innerText = "";
       element.dispatchEvent(
         new InputEvent("input", {
@@ -1053,6 +1067,7 @@ async function inputTextElement(element, text) {
         })
       );
     }
+    options.beforeDispatch?.("write");
     if (element.dispatchEvent(
       new InputEvent("beforeinput", {
         bubbles: true,
@@ -1061,6 +1076,7 @@ async function inputTextElement(element, text) {
         data: text
       })
     )) {
+      options.beforeDispatch?.("write");
       element.innerText = text;
       element.dispatchEvent(
         new InputEvent("input", {
@@ -1072,19 +1088,24 @@ async function inputTextElement(element, text) {
     }
     const planASucceeded = element.innerText.trim() === text.trim();
     if (!planASucceeded) {
+      options.beforeDispatch?.("write");
       element.focus();
       const doc = element.ownerDocument;
+      options.beforeDispatch?.("write");
       const selection = (doc.defaultView || window).getSelection();
       const range = doc.createRange();
       range.selectNodeContents(element);
       selection?.removeAllRanges();
       selection?.addRange(range);
+      options.beforeDispatch?.("write");
       doc.execCommand("delete", false);
+      options.beforeDispatch?.("write");
       doc.execCommand("insertText", false, text);
     }
     element.dispatchEvent(new Event("change", { bubbles: true }));
     element.blur();
   } else {
+    options.beforeDispatch?.("write");
     getNativeValueSetter(element).call(element, text);
   }
   if (!isContentEditable) {
@@ -1092,7 +1113,7 @@ async function inputTextElement(element, text) {
   }
   await waitFor(0.1);
 }
-async function selectOptionElement(selectElement, optionText) {
+async function selectOptionElement(selectElement, optionText, actionOptions = {}) {
   if (!isSelectElement(selectElement)) {
     throw new Error("Element is not a select element");
   }
@@ -1101,6 +1122,7 @@ async function selectOptionElement(selectElement, optionText) {
   if (!option) {
     throw new Error(`Option with text "${optionText}" not found in select element`);
   }
+  actionOptions.beforeDispatch?.("write");
   selectElement.value = option.value;
   selectElement.dispatchEvent(new Event("change", { bubbles: true }));
   await waitFor(0.1);
@@ -2935,12 +2957,12 @@ ${scrollHintAbove}`;
   /**
    * Click element by index
    */
-  async clickElement(index) {
+  async clickElement(index, options = {}) {
     try {
       this.assertIndexed();
       const element = await this.resolveElement(index);
       const elemText = this.elementTextMap.get(index);
-      await clickElement(element);
+      await clickElement(element, options);
       if (isAnchorElement(element) && element.target === "_blank") {
         return {
           success: true,
@@ -2961,12 +2983,12 @@ ${scrollHintAbove}`;
   /**
    * Input text into element by index
    */
-  async inputText(index, text) {
+  async inputText(index, text, options = {}) {
     try {
       this.assertIndexed();
       const element = await this.resolveElement(index);
       const elemText = this.elementTextMap.get(index);
-      await inputTextElement(element, text);
+      await inputTextElement(element, text, options);
       return {
         success: true,
         message: `\u2705 Input text (${text}) into element (${elemText ?? index}).`
@@ -2981,12 +3003,12 @@ ${scrollHintAbove}`;
   /**
    * Select dropdown option by index and option text
    */
-  async selectOption(index, optionText) {
+  async selectOption(index, optionText, options = {}) {
     try {
       this.assertIndexed();
       const element = await this.resolveElement(index);
       const elemText = this.elementTextMap.get(index);
-      await selectOptionElement(element, optionText);
+      await selectOptionElement(element, optionText, options);
       return {
         success: true,
         message: `\u2705 Selected option (${optionText}) in element (${elemText ?? index}).`

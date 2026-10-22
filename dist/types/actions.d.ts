@@ -3,6 +3,15 @@
  * All rights reserved.
  */
 import type { InteractiveElementDomNode } from './dom/dom_tree/type';
+/** Validation at the final synchronous boundary before generated input or a value write. */
+export interface ActionOptions {
+    /**
+     * Must be synchronous. Throw to stop the action; no events or writes after this
+     * checkpoint are performed. A phase may be checked multiple times because host
+     * event handlers can synchronously change the target between dispatches.
+     */
+    beforeDispatch?: (phase: 'pointer' | 'click' | 'write') => void;
+}
 /**
  * Get the HTMLElement by index from a selectorMap.
  * @private Internal method, subject to change at any time.
@@ -15,16 +24,16 @@ export declare function getElementByIndex(selectorMap: Map<number, InteractiveEl
  *
  * @private Internal method, subject to change at any time.
  */
-export declare function clickElement(element: HTMLElement): Promise<void>;
+export declare function clickElement(element: HTMLElement, options?: ActionOptions): Promise<void>;
 /**
  * @private Internal method, subject to change at any time.
  */
-export declare function inputTextElement(element: HTMLElement, text: string): Promise<void>;
+export declare function inputTextElement(element: HTMLElement, text: string, options?: ActionOptions): Promise<void>;
 /**
  * @todo browser-use version is very complex and supports menu tags, need to follow up
  * @private Internal method, subject to change at any time.
  */
-export declare function selectOptionElement(selectElement: HTMLSelectElement, optionText: string): Promise<void>;
+export declare function selectOptionElement(selectElement: HTMLSelectElement, optionText: string, actionOptions?: ActionOptions): Promise<void>;
 /**
  * @private Internal method, subject to change at any time.
  */

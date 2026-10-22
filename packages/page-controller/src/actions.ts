@@ -16,6 +16,16 @@ import {
 	waitFor,
 } from './utils'
 
+/** Validation at the final synchronous boundary before generated input or a value write. */
+export interface ActionOptions {
+	/**
+	 * Must be synchronous. Throw to stop the action; no events or writes after this
+	 * checkpoint are performed. A phase may be checked multiple times because host
+	 * event handlers can synchronously change the target between dispatches.
+	 */
+	beforeDispatch?: (phase: 'pointer' | 'click' | 'write') => void
+}
+
 /**
  * Get the HTMLElement by index from a selectorMap.
  * @private Internal method, subject to change at any time.
@@ -43,12 +53,17 @@ export function getElementByIndex(
 
 let lastClickedElement: HTMLElement | null = null
 
-function blurLastClickedElement() {
+function blurLastClickedElement(options: ActionOptions) {
 	if (lastClickedElement) {
+		options.beforeDispatch?.('pointer')
 		lastClickedElement.dispatchEvent(new PointerEvent('pointerout', { bubbles: true }))
+		options.beforeDispatch?.('pointer')
 		lastClickedElement.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false }))
+		options.beforeDispatch?.('pointer')
 		lastClickedElement.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+		options.beforeDispatch?.('pointer')
 		lastClickedElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }))
+		options.beforeDispatch?.('pointer')
 		lastClickedElement.blur()
 		lastClickedElement = null
 	}
@@ -61,8 +76,9 @@ function blurLastClickedElement() {
  *
  * @private Internal method, subject to change at any time.
  */
-export async function clickElement(element: HTMLElement) {
-	blurLastClickedElement()
+export async function clickElement(element: HTMLElement, options: ActionOptions = {}) {
+	options.beforeDispatch?.('pointer')
+	blurLastClickedElement(options)
 
 	lastClickedElement = element
 
@@ -98,28 +114,34 @@ export async function clickElement(element: HTMLElement) {
 		pointerType: 'mouse',
 	}
 	const mouseOpts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 }
+	const dispatchPointerEvent = (event: Event) => {
+		options.beforeDispatch?.('pointer')
+		target.dispatchEvent(event)
+	}
 
 	// Hover — pointer events first, then mouse events (spec order)
-	target.dispatchEvent(new PointerEvent('pointerover', pointerOpts))
-	target.dispatchEvent(new PointerEvent('pointerenter', { ...pointerOpts, bubbles: false }))
-	target.dispatchEvent(new MouseEvent('mouseover', mouseOpts))
-	target.dispatchEvent(new MouseEvent('mouseenter', { ...mouseOpts, bubbles: false }))
+	dispatchPointerEvent(new PointerEvent('pointerover', pointerOpts))
+	dispatchPointerEvent(new PointerEvent('pointerenter', { ...pointerOpts, bubbles: false }))
+	dispatchPointerEvent(new MouseEvent('mouseover', mouseOpts))
+	dispatchPointerEvent(new MouseEvent('mouseenter', { ...mouseOpts, bubbles: false }))
 
 	// Press
-	target.dispatchEvent(new PointerEvent('pointerdown', pointerOpts))
-	target.dispatchEvent(new MouseEvent('mousedown', mouseOpts))
+	dispatchPointerEvent(new PointerEvent('pointerdown', pointerOpts))
+	dispatchPointerEvent(new MouseEvent('mousedown', mouseOpts))
 
 	// Focus is not part of the standard pointer/mouse event sequence
 	// "undefined and varies between user agents".
 	// We focus the original element (nearest focusable ancestor), not the hit-test target, matching browser behavior.
+	options.beforeDispatch?.('pointer')
 	element.focus({ preventScroll: true })
 
 	// Release
-	target.dispatchEvent(new PointerEvent('pointerup', pointerOpts))
-	target.dispatchEvent(new MouseEvent('mouseup', mouseOpts))
+	dispatchPointerEvent(new PointerEvent('pointerup', pointerOpts))
+	dispatchPointerEvent(new MouseEvent('mouseup', mouseOpts))
 
 	// Click — activation behavior (navigation, form submit, etc.) triggers
 	// via bubbling from target up to the interactive ancestor.
+	options.beforeDispatch?.('click')
 	target.click()
 
 	await waitFor(0.2)
@@ -128,13 +150,17 @@ export async function clickElement(element: HTMLElement) {
 /**
  * @private Internal method, subject to change at any time.
  */
-export async function inputTextElement(element: HTMLElement, text: string) {
+export async function inputTextElement(
+	element: HTMLElement,
+	text: string,
+	options: ActionOptions = {}
+) {
 	const isContentEditable = element.isContentEditable
 	if (!isInputElement(element) && !isTextAreaElement(element) && !isContentEditable) {
 		throw new Error('Element is not an input, textarea, or contenteditable')
 	}
 
-	await clickElement(element)
+	await clickElement(element, options)
 
 	if (isContentEditable) {
 		// Contenteditable support (partial)
@@ -151,6 +177,7 @@ export async function inputTextElement(element: HTMLElement, text: string) {
 		// Sequence: beforeinput -> mutation -> input -> change -> blur
 
 		// Dispatch beforeinput + mutation + input for clearing
+		options.beforeDispatch?.('write')
 		if (
 			element.dispatchEvent(
 				new InputEvent('beforeinput', {
@@ -160,6 +187,7 @@ export async function inputTextElement(element: HTMLElement, text: string) {
 				})
 			)
 		) {
+			options.beforeDispatch?.('write')
 			element.innerText = ''
 			element.dispatchEvent(
 				new InputEvent('input', {
@@ -170,6 +198,7 @@ export async function inputTextElement(element: HTMLElement, text: string) {
 		}
 
 		// Dispatch beforeinput + mutation + input for insertion (important for React apps)
+		options.beforeDispatch?.('write')
 		if (
 			element.dispatchEvent(
 				new InputEvent('beforeinput', {
@@ -180,6 +209,7 @@ export async function inputTextElement(element: HTMLElement, text: string) {
 				})
 			)
 		) {
+			options.beforeDispatch?.('write')
 			element.innerText = text
 			element.dispatchEvent(
 				new InputEvent('input', {
@@ -198,17 +228,21 @@ export async function inputTextElement(element: HTMLElement, text: string) {
 			// Works: Quill, Slate.js, react contenteditable components.
 			// This approach integrates with the browser's undo stack and is handled
 			// natively by most rich-text editors.
+			options.beforeDispatch?.('write')
 			element.focus()
 
 			// Select all existing content and delete it
 			const doc = element.ownerDocument
+			options.beforeDispatch?.('write')
 			const selection = (doc.defaultView || window).getSelection()
 			const range = doc.createRange()
 			range.selectNodeContents(element)
 			selection?.removeAllRanges()
 			selection?.addRange(range)
 
+			options.beforeDispatch?.('write')
 			doc.execCommand('delete', false)
+			options.beforeDispatch?.('write')
 			doc.execCommand('insertText', false, text)
 		}
 
@@ -218,6 +252,7 @@ export async function inputTextElement(element: HTMLElement, text: string) {
 		// Trigger blur for validation
 		element.blur()
 	} else {
+		options.beforeDispatch?.('write')
 		getNativeValueSetter(element as HTMLInputElement | HTMLTextAreaElement).call(element, text)
 	}
 
@@ -233,7 +268,11 @@ export async function inputTextElement(element: HTMLElement, text: string) {
  * @todo browser-use version is very complex and supports menu tags, need to follow up
  * @private Internal method, subject to change at any time.
  */
-export async function selectOptionElement(selectElement: HTMLSelectElement, optionText: string) {
+export async function selectOptionElement(
+	selectElement: HTMLSelectElement,
+	optionText: string,
+	actionOptions: ActionOptions = {}
+) {
 	if (!isSelectElement(selectElement)) {
 		throw new Error('Element is not a select element')
 	}
@@ -245,6 +284,7 @@ export async function selectOptionElement(selectElement: HTMLSelectElement, opti
 		throw new Error(`Option with text "${optionText}" not found in select element`)
 	}
 
+	actionOptions.beforeDispatch?.('write')
 	selectElement.value = option.value
 	selectElement.dispatchEvent(new Event('change', { bubbles: true }))
 

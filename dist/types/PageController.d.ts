@@ -1,3 +1,12 @@
+/**
+ * Copyright (C) 2025 Alibaba Group Holding Limited
+ * All rights reserved.
+ *
+ * PageController - Manages DOM operations and element interactions.
+ * Designed to be independent of LLM and can be tested in unit tests.
+ * All public methods are async for potential remote calling support.
+ */
+import { type ActionOptions } from './actions';
 import * as dom from './dom';
 /**
  * Configuration for PageController
@@ -96,15 +105,15 @@ export declare class PageController extends EventTarget {
     /**
      * Click element by index
      */
-    clickElement(index: number): Promise<ActionResult>;
+    clickElement(index: number, options?: ActionOptions): Promise<ActionResult>;
     /**
      * Input text into element by index
      */
-    inputText(index: number, text: string): Promise<ActionResult>;
+    inputText(index: number, text: string, options?: ActionOptions): Promise<ActionResult>;
     /**
      * Select dropdown option by index and option text
      */
-    selectOption(index: number, optionText: string): Promise<ActionResult>;
+    selectOption(index: number, optionText: string, options?: ActionOptions): Promise<ActionResult>;
     /**
      * Scroll vertically
      */

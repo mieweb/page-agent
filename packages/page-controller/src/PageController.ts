@@ -7,6 +7,7 @@
  * All public methods are async for potential remote calling support.
  */
 import {
+	type ActionOptions,
 	clickElement,
 	getElementByIndex,
 	inputTextElement,
@@ -264,12 +265,12 @@ export class PageController extends EventTarget {
 	/**
 	 * Click element by index
 	 */
-	async clickElement(index: number): Promise<ActionResult> {
+	async clickElement(index: number, options: ActionOptions = {}): Promise<ActionResult> {
 		try {
 			this.assertIndexed()
 			const element = await this.resolveElement(index)
 			const elemText = this.elementTextMap.get(index)
-			await clickElement(element)
+			await clickElement(element, options)
 
 			// Handle links that open in new tabs
 			if (isAnchorElement(element) && element.target === '_blank') {
@@ -294,12 +295,12 @@ export class PageController extends EventTarget {
 	/**
 	 * Input text into element by index
 	 */
-	async inputText(index: number, text: string): Promise<ActionResult> {
+	async inputText(index: number, text: string, options: ActionOptions = {}): Promise<ActionResult> {
 		try {
 			this.assertIndexed()
 			const element = await this.resolveElement(index)
 			const elemText = this.elementTextMap.get(index)
-			await inputTextElement(element, text)
+			await inputTextElement(element, text, options)
 
 			return {
 				success: true,
@@ -316,12 +317,16 @@ export class PageController extends EventTarget {
 	/**
 	 * Select dropdown option by index and option text
 	 */
-	async selectOption(index: number, optionText: string): Promise<ActionResult> {
+	async selectOption(
+		index: number,
+		optionText: string,
+		options: ActionOptions = {}
+	): Promise<ActionResult> {
 		try {
 			this.assertIndexed()
 			const element = await this.resolveElement(index)
 			const elemText = this.elementTextMap.get(index)
-			await selectOptionElement(element as HTMLSelectElement, optionText)
+			await selectOptionElement(element as HTMLSelectElement, optionText, options)
 
 			return {
 				success: true,

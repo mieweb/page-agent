@@ -1,6 +1,6 @@
 {
   "name": "@mieweb/page-controller",
-  "version": "1.12.4-mie.1",
+  "version": "1.12.4-mie.2",
   "description": "Browser-only PageController distribution from mieweb/page-agent; no LLM runtime",
   "license": "MIT",
   "type": "module",
